@@ -22,14 +22,14 @@ namespace Dictanary.Services
 
             using (FileStream readStream = File.Open(relativePath, FileMode.Open, FileAccess.Read))
             {
-                lang = await System.Text.Json.JsonSerializer.DeserializeAsync<Language>(readStream);
+                lang = await JsonSerializer.DeserializeAsync<Language>(readStream);
 
                 lang.Words.Add(data);
             }
 
             using (FileStream writeStream = File.Open(relativePath, FileMode.Create, FileAccess.Write))
             {
-                await System.Text.Json.JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
             }
 
         }
@@ -38,7 +38,7 @@ namespace Dictanary.Services
         {
             using (FileStream writeStream = File.Open(filePath, FileMode.Create, FileAccess.Write))
             {
-                await System.Text.Json.JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
+                await JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
             }
         }
 
@@ -69,7 +69,7 @@ namespace Dictanary.Services
 
             using (FileStream fs = File.Create(relativePath))
             {
-                await System.Text.Json.JsonSerializer.SerializeAsync(fs, new Language { Name = name, Words = new List<Word>() });
+                await JsonSerializer.SerializeAsync(fs, new Language { Name = name, Words = new List<Word>() });
             }
 
             return "File is created";
@@ -81,7 +81,7 @@ namespace Dictanary.Services
             {
                 using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
                 {
-                    return System.Text.Json.JsonSerializer.Deserialize<Language>(stream);
+                    return JsonSerializer.Deserialize<Language>(stream);
                 }
             }
             else
@@ -92,22 +92,10 @@ namespace Dictanary.Services
 
         public async Task<string> RemoveWordAsync(string filePath, Word wordName)
         {
-            var language = new Language();
-
             string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
             string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data\{filePath}");
 
-            if (File.Exists(relativePath)) 
-            { 
-                using (FileStream stream = File.Open(relativePath, FileMode.Open, FileAccess.Read))
-                {
-                    language = System.Text.Json.JsonSerializer.Deserialize<Language>(stream);
-                }
-            }
-            else
-            {
-                return "File isn't exist";
-            }
+            var language = await ReadJsonFileAsync(relativePath);
 
 
             if (language != null) 
@@ -118,8 +106,7 @@ namespace Dictanary.Services
                 { 
                     language.Words.Remove(word);
 
-                    string json = JsonSerializer.Serialize(language);
-                    await File.WriteAllTextAsync(relativePath, json);
+                    await RewriteTheFileAsync(language, relativePath);
 
                     return "Word was removed";
                 }
@@ -143,13 +130,13 @@ namespace Dictanary.Services
 
             foreach (var word in language.Words)
             {
-                Console.WriteLine(word.WordName); // Перевірте, чи є елементи, що містять "w"
+                Console.WriteLine(word.WordName);
             }
 
             var words = language.Words.Where(x => x.WordName
-            .ToLower()
-            .Trim()
-            .Contains(wordName.ToLower().Trim()));
+                .ToLower()
+                .Trim()
+                .Contains(wordName.ToLower().Trim()));
 
             return words;
         }
@@ -161,6 +148,12 @@ namespace Dictanary.Services
             var words = language.Words.Where(x => x.WordName.ToLower().Contains(wordName));
 
             return words;
+        }
+
+        private async Task RewriteTheFileAsync<T>(T data, string path)
+        {
+            string json = JsonSerializer.Serialize(data);
+            await File.WriteAllTextAsync(path, json);
         }
     }
 }
