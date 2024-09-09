@@ -1,5 +1,6 @@
 ﻿using Dictanary.Services;
 using Dictianary.Models;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +19,7 @@ namespace Dictionary
     /// </summary>
     public partial class MainWindow : Window
     {
-        public List<string> Langs {  get; set; }
+        public ObservableCollection<string> Langs {  get; set; }
 
         private JsonService JsonService = new JsonService();
         private ListWords ListWordsWindow {  get; set; }
@@ -32,6 +33,7 @@ namespace Dictionary
         private async void CreateLang_Click(object sender, RoutedEventArgs e)
         {
             ResultLang.Text = await JsonService.CreateJsonFile(lang.Text);
+            Langs = JsonService.GetAllLangs();
         }
         
         private async void CreateTranslation_Click(object sender, RoutedEventArgs e)
@@ -72,12 +74,7 @@ namespace Dictionary
 
         private async void RemoveWord_Click(object sender, RoutedEventArgs e)
         {
-            await JsonService.RemoveWordAsync(Lang.SelectedItem as string, new Word { WordName = WordName.Text, Translation = Translation.Text });
-        }
-
-        private void Button_Click_1(object sender, RoutedEventArgs e)
-        {
-
+            RemoveWordError.Text = await JsonService.RemoveWordAsync(Lang.SelectedItem as string, new Word { WordName = WordName.Text, Translation = Translation.Text });
         }
     }
 }

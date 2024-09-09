@@ -1,13 +1,7 @@
 ﻿using Dictianary.Models;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
-using System.IO.Enumeration;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Dictanary.Services
@@ -16,8 +10,8 @@ namespace Dictanary.Services
     {
         public async Task WriteJsonAsync(Word data, string filePath)
         {
-            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data\{filePath}");
+            string relativePath = GetRealativePath(filePath);
+
             Language lang;
 
             using (FileStream readStream = File.Open(relativePath, FileMode.Open, FileAccess.Read))
@@ -31,7 +25,6 @@ namespace Dictanary.Services
             {
                 await JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
             }
-
         }
 
         public async Task WriteJsonAsync(string filePath, Language lang)
@@ -42,23 +35,26 @@ namespace Dictanary.Services
             }
         }
 
-        public List<string> GetAllLangs()
+        public ObservableCollection<string> GetAllLangs()
         {
-            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data");
-            List<string> langsFiles = Directory.GetFiles(relativePath).ToList();
-            List<string> langs = new List<string>();
-            foreach (var langsItem in langsFiles)
-            {
-                langs.Add(Path.GetFileName(langsItem));
-            }
+            string relativePath = GetRealativePath();
+
+            var langs = new ObservableCollection<string>(
+                Directory.GetFiles(relativePath)
+                .Select(Path.GetFileNameWithoutExtension)
+            );
+
             return langs;
         }
 
         public async Task<string> CreateJsonFile(string name)
         {
-            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data\{name}.json");
+            string relativePath = GetRealativePath($"{name}.json");
+
+            if (name == null || File.Exists(name)) 
+            {
+                return "Langauge is exist or name of the langauge is null";
+            }
 
             string directoryPath = Path.GetDirectoryName(relativePath);
 
@@ -77,61 +73,40 @@ namespace Dictanary.Services
 
         public async Task<Language> ReadJsonFileAsync(string filePath)
         {
-            if (File.Exists(filePath))
-            {
-                using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
-                {
-                    return JsonSerializer.Deserialize<Language>(stream);
-                }
-            }
-            else
-            {
+            if (!File.Exists(filePath))
                 return null!;
+
+            using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+            {
+                return JsonSerializer.Deserialize<Language>(stream);
             }
         }
 
         public async Task<string> RemoveWordAsync(string filePath, Word wordName)
         {
-            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data\{filePath}");
+            string relativePath = GetRealativePath(filePath);
 
             var language = await ReadJsonFileAsync(relativePath);
 
+            Word word = language?.Words.FirstOrDefault(x => x.Equals(wordName));
 
-            if (language != null) 
-            { 
-                Word word = language.Words.FirstOrDefault(x => x.Equals(wordName));
+            if (word == null)
+                return language == null ? "Not found a language" : "Not found a word";
 
-                if (word != null) 
-                { 
-                    language.Words.Remove(word);
-
-                    await RewriteTheFileAsync(language, relativePath);
-
-                    return "Word was removed";
-                }
-                return "Not found a word";
-            }
+            language!.Words.Remove(word);
+            await RewriteFileAsync(language, relativePath);
 
             return "Not found a language";
         }
 
-        public async Task<IEnumerable<Word>> FindWordByWordNameAsync(string filePath, string wordName) 
+        public async Task<IEnumerable<Word>?> FindWordByWordNameAsync(string filePath, string wordName) 
         {
-            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string relativePath = Path.Combine(projectDirectory, @$"..\..\..\Data\{filePath}");
+            string relativePath = GetRealativePath(filePath);
 
             var language = await ReadJsonFileAsync(relativePath);
 
             if (language == null) 
-            {
                 return null!;
-            }
-
-            foreach (var word in language.Words)
-            {
-                Console.WriteLine(word.WordName);
-            }
 
             var words = language.Words.Where(x => x.WordName
                 .ToLower()
@@ -146,14 +121,19 @@ namespace Dictanary.Services
             var language = await ReadJsonFileAsync(filePath);
 
             var words = language.Words.Where(x => x.WordName.ToLower().Contains(wordName));
-
             return words;
         }
 
-        private async Task RewriteTheFileAsync<T>(T data, string path)
+        private async Task RewriteFileAsync<T>(T data, string path)
         {
             string json = JsonSerializer.Serialize(data);
             await File.WriteAllTextAsync(path, json);
+        }
+
+        private string GetRealativePath(string filePath = "") 
+        {
+            string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            return Path.Combine(projectDirectory, @$"..\..\..\Data\{filePath}");
         }
     }
 }
