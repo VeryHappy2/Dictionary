@@ -30,6 +30,13 @@ namespace Dictanary.Services
         {
             string relativePath = GetRealativePath();
 
+            string directoryPath = Path.GetDirectoryName(relativePath);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
             var langs = new ObservableCollection<string>(
                 Directory.GetFiles(relativePath)
                 .Select(Path.GetFileNameWithoutExtension)
