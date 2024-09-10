@@ -25,7 +25,8 @@ namespace Dictionary
 
         public ListWords(IEnumerable<Word> words)
         {
-            Words = new ObservableCollection<Word>(words); InitializeComponent();
+            Words = new ObservableCollection<Word>(words); 
+            InitializeComponent();
             this.DataContext = this;
         }
 

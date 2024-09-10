@@ -33,7 +33,7 @@ namespace Dictionary
         private async void CreateLang_Click(object sender, RoutedEventArgs e)
         {
             ResultLang.Text = await JsonService.CreateJsonFile(lang.Text);
-            Langs = JsonService.GetAllLangs();
+            Langs.Add(lang.Text);
         }
         
         private async void CreateTranslation_Click(object sender, RoutedEventArgs e)
@@ -43,38 +43,66 @@ namespace Dictionary
                 CreateWordError.Text = "Translation or word name is empty";
             }
 
-            await JsonService.WriteJsonAsync(new Word
+            CreateWordError.Text = await JsonService.WriteJsonAsync(new Word
                 {
                     WordName = WordName.Text,
                     Translation = Translation.Text
-                }, Lang.SelectedItem as string);
+                }, $"{Lang.SelectedItem as string}.json");
         }
 
         private async void FindByWord_Click(object sender, RoutedEventArgs e)
         {
-            var result = await JsonService.FindWordByWordNameAsync(Lang.SelectedItem as string, WordName.Text);
+            var result = await JsonService.FindWordByWordNameAsync($"{Lang.SelectedItem as string}.json", WordName.Text);
 
             if (result == null) 
             {
-                FindWordError.Text = "Not found or you didn't choose a langauge";
+                FindWordError.Text = "Not found or you didn't choose a language";
+                return;
             }
-            else
+
+            if (ListWordsWindow != null && ListWordsWindow.IsLoaded)
             {
-                if (ListWordsWindow != null && ListWordsWindow.IsLoaded)
-                {
-                    ListWordsWindow.UpdateWords(result);
-                }
-                else
-                {
-                    ListWordsWindow = new ListWords(result);
-                    ListWordsWindow.Show();
-                }
-            } 
+                ListWordsWindow.UpdateWords(result);
+                return;
+            }
+
+            ShowListWordsWindow(result);
+        }
+
+        private async void GetAllWords_Click(object sender, RoutedEventArgs e) 
+        {
+            var result = await JsonService.ReadJsonFileAsync($"{Lang.SelectedItem as string}.json");
+
+            if (result == null || result.Words == null)
+            {
+                GetAllWords.Text = "Language hasn't any words";
+                return;
+            }
+
+            if (ListWordsWindow != null && ListWordsWindow.IsLoaded)
+            {
+                ListWordsWindow.UpdateWords(result.Words);
+                return;
+            }
+
+            ShowListWordsWindow(result.Words);
         }
 
         private async void RemoveWord_Click(object sender, RoutedEventArgs e)
         {
-            RemoveWordError.Text = await JsonService.RemoveWordAsync(Lang.SelectedItem as string, new Word { WordName = WordName.Text, Translation = Translation.Text });
+            RemoveWordError.Text = await JsonService.RemoveWordAsync(
+                $"{Lang.SelectedItem as string}.json", 
+                new Word 
+                { 
+                    WordName = WordName.Text, 
+                    Translation = Translation.Text 
+                });
+        }
+
+        private void ShowListWordsWindow(IEnumerable<Word> words)
+        {
+            ListWordsWindow = new ListWords(words);
+            ListWordsWindow.Show();
         }
     }
 }

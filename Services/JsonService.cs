@@ -8,31 +8,22 @@ namespace Dictanary.Services
 {
     public class JsonService
     {
-        public async Task WriteJsonAsync(Word data, string filePath)
+        public async Task<string> WriteJsonAsync(Word word, string filePath)
         {
             string relativePath = GetRealativePath(filePath);
 
-            Language lang;
+            Language lang = await ReadJsonFileAsync(filePath);
 
-            using (FileStream readStream = File.Open(relativePath, FileMode.Open, FileAccess.Read))
-            {
-                lang = await JsonSerializer.DeserializeAsync<Language>(readStream);
+            if (lang == null)
+                return "Language isn't exist";
 
-                lang.Words.Add(data);
-            }
+            lang.Words.Add(word);
 
             using (FileStream writeStream = File.Open(relativePath, FileMode.Create, FileAccess.Write))
             {
                 await JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
             }
-        }
-
-        public async Task WriteJsonAsync(string filePath, Language lang)
-        {
-            using (FileStream writeStream = File.Open(filePath, FileMode.Create, FileAccess.Write))
-            {
-                await JsonSerializer.SerializeAsync(writeStream, lang, new JsonSerializerOptions { WriteIndented = true });
-            }
+            return "The word was created";
         }
 
         public ObservableCollection<string> GetAllLangs()
@@ -51,10 +42,8 @@ namespace Dictanary.Services
         {
             string relativePath = GetRealativePath($"{name}.json");
 
-            if (name == null || File.Exists(name)) 
-            {
-                return "Langauge is exist or name of the langauge is null";
-            }
+            if (name == null) 
+                return File.Exists(name) ? "Langauge is exist" : "The field of langauge is empty";
 
             string directoryPath = Path.GetDirectoryName(relativePath);
 
@@ -63,20 +52,19 @@ namespace Dictanary.Services
                 Directory.CreateDirectory(directoryPath);
             }
 
-            using (FileStream fs = File.Create(relativePath))
-            {
-                await JsonSerializer.SerializeAsync(fs, new Language { Name = name, Words = new List<Word>() });
-            }
+            await CreateLangaugeFileAsync(relativePath, new Language { Name = name, Words = new List<Word>() });
 
             return "File is created";
         }
 
         public async Task<Language> ReadJsonFileAsync(string filePath)
         {
-            if (!File.Exists(filePath))
+            var relativePath = GetRealativePath(filePath);
+
+            if (!File.Exists(relativePath))
                 return null!;
 
-            using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+            using (FileStream stream = File.Open(relativePath, FileMode.Open, FileAccess.Read))
             {
                 return JsonSerializer.Deserialize<Language>(stream);
             }
@@ -86,7 +74,7 @@ namespace Dictanary.Services
         {
             string relativePath = GetRealativePath(filePath);
 
-            var language = await ReadJsonFileAsync(relativePath);
+            var language = await ReadJsonFileAsync(filePath);
 
             Word word = language?.Words.FirstOrDefault(x => x.Equals(wordName));
 
@@ -96,14 +84,12 @@ namespace Dictanary.Services
             language!.Words.Remove(word);
             await RewriteFileAsync(language, relativePath);
 
-            return "Not found a language";
+            return "Success";
         }
 
         public async Task<IEnumerable<Word>?> FindWordByWordNameAsync(string filePath, string wordName) 
         {
-            string relativePath = GetRealativePath(filePath);
-
-            var language = await ReadJsonFileAsync(relativePath);
+            var language = await ReadJsonFileAsync(filePath);
 
             if (language == null) 
                 return null!;
@@ -128,6 +114,14 @@ namespace Dictanary.Services
         {
             string json = JsonSerializer.Serialize(data);
             await File.WriteAllTextAsync(path, json);
+        }
+
+        private async Task CreateLangaugeFileAsync(string filePath, Language language)
+        {
+            using (FileStream fs = File.Create(filePath))
+            {
+                await JsonSerializer.SerializeAsync(fs, language);
+            }
         }
 
         private string GetRealativePath(string filePath = "") 

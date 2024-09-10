@@ -13,8 +13,6 @@
                 <ComboBox HorizontalAlignment="Left" Width="120" x:Name="Lang" ItemsSource="{Binding Langs}"/>
             </WrapPanel>
             
-            
-            
             <WrapPanel Orientation="Horizontal" Margin="0,20,0,20">
                 <TextBlock Margin="4px" Text="What langauge do you want to add"/>
                 <TextBox x:Name="lang"
@@ -23,8 +21,6 @@
                 <Button Content="Create a langauge" Click="CreateLang_Click" Height="22"/>
                 <TextBlock x:Name="ResultLang" Width="100" Margin="6, 0, 0, 0"/>
             </WrapPanel>
-            
-
             
             <StackPanel Orientation="Horizontal" Margin="0,20,0,20">
                 <TextBlock Margin="4px" Text="What a word do you want to add or find or remove"/>
@@ -51,6 +47,11 @@
                 <StackPanel Margin="4">
                     <Button Content="Remove a word" Click="RemoveWord_Click" Width="100"/>
                     <TextBlock Foreground="Red" x:Name="RemoveWordError" ></TextBlock>
+                </StackPanel>
+                
+                <StackPanel Margin="4">
+                    <Button Content="Get all words from a langauge" Click="GetAllWords_Click"/>
+                    <TextBlock Foreground="Red" x:Name="GetAllWords" ></TextBlock>
                 </StackPanel>
             </WrapPanel>
             
